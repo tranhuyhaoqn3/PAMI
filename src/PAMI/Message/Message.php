@@ -147,23 +147,20 @@ abstract class Message
                 return intval($value, 0);
             }
             if (filter_var($value, FILTER_VALIDATE_FLOAT, FILTER_FLAG_ALLOW_FRACTION | FILTER_FLAG_ALLOW_THOUSAND | FILTER_FLAG_ALLOW_SCIENTIFIC)) {
-                return (float)$value;
+                return (float) $value;
             }
-            return (double)$value;
+            return (double) $value;
         } elseif (is_string($value)) {
             //if (filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE))
             //    return (boolean)$value;
             if (strcasecmp($value, 'on') === 0 || strcasecmp($value, 'true') === 0 || strcasecmp($value, 'yes') === 0) {
-                return (boolean)true;
+                return (boolean) true;
             }
             if (strcasecmp($value, 'off') === 0 || strcasecmp($value, 'false') === 0 || strcasecmp($value, 'no') === 0) {
-                return (boolean)false;
+                return (boolean) false;
             }
-            if (filter_var($value, FILTER_SANITIZE_STRING, FILTER_NULL_ON_FAILURE)) {
-                return (string)$value;
-            }
-            if (filter_var($value, FILTER_SANITIZE_FULL_SPECIAL_CHARS, FILTER_NULL_ON_FAILURE)) {
-                return (string)htmlspecialchars($value, ENT_QUOTES);
+            if (filter_var($value, FILTER_UNSAFE_RAW, FILTER_NULL_ON_FAILURE)) {
+                return (string) htmlspecialchars($value, ENT_QUOTES);
             }
             throw new PAMIException("Incoming String is not sanitary. Skipping: '" . $value . "'\n");
         } else {
@@ -181,8 +178,8 @@ abstract class Message
      */
     protected function setKey($key, $value)
     {
-        $key = strtolower((string)$key);
-        $this->keys[$key] = (string)$value;
+        $key = strtolower((string) $key);
+        $this->keys[$key] = (string) $value;
     }
 
     /**
@@ -195,7 +192,7 @@ abstract class Message
      */
     protected function setSanitizedKey($key, $value)
     {
-        $key = strtolower((string)$key);
+        $key = strtolower((string) $key);
         if ($key === 'actionid' or $key === 'uniqueid' or $key === 'linkedid') {
             $this->keys[$key] = $value;
         } else {
