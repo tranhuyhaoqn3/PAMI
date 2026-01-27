@@ -15,6 +15,9 @@
 # Fork !
 Note that this is a fork of the official release by [Marcelo Gornstein](https://github.com/marcelog/PAMI), which has not been maintained for a while (hence the fork).
 
+## ✨ PHP 8.2 & 8.3 Compatible
+This fork has been updated to be fully compatible with PHP 8.2 and 8.3, while maintaining backward compatibility with PHP 7.4+.
+
 # Introduction
 
 PAMI means PHP Asterisk Manager Interface. As its name suggests its just a
@@ -36,16 +39,37 @@ either via SOA or ajax.
 
 # PHP Versions
 
-Note: PAMI Requires PHP 5.6+.
+**Current Version Requirements:**
+- ✅ PHP 7.4
+- ✅ PHP 8.0
+- ✅ PHP 8.1
+- ✅ PHP 8.2
+- ✅ PHP 8.3
+
+**Note:** This version requires PHP 7.4 or higher. For older PHP versions (5.6-7.3), please use an earlier release.
 
 # Installing
 Add this library to your [Composer](https://packagist.org/) configuration. In
 composer.json:
 ```json
   "require": {
-    "chan-sccp/pami": "2.*"
+    "tranhuyhaoqn3/pami-client": "^2.0"
   }
 ```
+
+Then run:
+```bash
+composer install
+```
+
+## Upgrading from chan-sccp/pami
+If you're upgrading from the `chan-sccp/pami` package, update your composer.json:
+```json
+  "require": {
+    "tranhuyhaoqn3/pami-client": "^2.0"
+  }
+```
+Then run `composer update`. No code changes are required.
 
 # QuickStart
 

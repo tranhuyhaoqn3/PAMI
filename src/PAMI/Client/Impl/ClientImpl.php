@@ -27,7 +27,6 @@
  * limitations under the License.
  *
  */
-declare(ticks=1);
 namespace PAMI\Client\Impl;
 
 use PAMI\Message\OutgoingMessage;
@@ -516,7 +515,7 @@ class ClientImpl implements IClient
             }
             $response = $this->getRelated($message);
             if ($response != false) {
-                $this->_lastActionId = false;
+                $this->lastActionId = false;
                 return $response;
             }
         }
