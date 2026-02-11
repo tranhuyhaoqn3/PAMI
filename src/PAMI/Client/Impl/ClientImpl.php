@@ -367,7 +367,17 @@ class ClientImpl implements IClient
         //$read = @fread($this->socket, 65535);
         $read = @fread($this->socket, 8192);
         if ($read === false || (empty($read) && @feof($this->socket))) {
-            throw new ClientException('Error reading');
+            // Socket disconnected, try to reconnect
+            $this->logger->warning('Socket disconnected (EOF), attempting to reconnect...');
+            if ($this->autoReconnect && $this->reconnect()) {
+                // Reconnected successfully, try reading again
+                $read = @fread($this->socket, 8192);
+                if ($read === false) {
+                    throw new ClientException('Error reading after reconnect');
+                }
+            } else {
+                throw new ClientException('Socket disconnected and reconnection failed');
+            }
         }
         $this->currentProcessingMessage .= $read;
         // If we have a complete message, then return it. Save the rest for
@@ -616,7 +626,12 @@ class ClientImpl implements IClient
     public function close()
     {
         $this->logger->debug('Closing connection to asterisk.');
-        @stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR);
+        // Disable auto-reconnect to prevent reconnection after explicit close
+        $this->autoReconnect = false;
+        if (is_resource($this->socket)) {
+            @stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR);
+        }
+        $this->socket = null;
     }
 
     /**
