@@ -86,7 +86,11 @@ $options = array(
     'username' => 'asd',
     'secret' => 'asd',
     'connect_timeout' => 10,
-    'read_timeout' => 10
+    'read_timeout' => 10,
+    // Auto-reconnect settings (optional, enabled by default)
+    'auto_reconnect' => true,           // Enable auto-reconnect on connection loss
+    'max_reconnect_attempts' => 5,      // Maximum reconnection attempts
+    'reconnect_delay' => 2              // Delay in seconds between reconnect attempts
 );
 $client = new \PAMI\Client\Impl\ClientImpl($options);
 

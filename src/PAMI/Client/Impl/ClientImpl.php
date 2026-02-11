@@ -165,6 +165,24 @@ class ClientImpl implements IClient
      */
     private $lastActionClass;
 
+    /**
+     * Maximum number of reconnect attempts
+     * @var integer
+     */
+    private $maxReconnectAttempts;
+
+    /**
+     * Delay between reconnect attempts in seconds
+     * @var integer
+     */
+    private $reconnectDelay;
+
+    /**
+     * Enable auto-reconnect
+     * @var boolean
+     */
+    private $autoReconnect;
+
 
     /**
      * Return a formatted string containing scheme, host and port
@@ -244,6 +262,65 @@ class ClientImpl implements IClient
     }
 
     /**
+     * Attempts to reconnect to AMI with retry logic.
+     *
+     * @param integer $attempt Current attempt number
+     * @throws \PAMI\Client\Exception\ClientException
+     * @return boolean
+     */
+    protected function reconnect($attempt = 1)
+    {
+        if (!$this->autoReconnect) {
+            return false;
+        }
+
+        if ($attempt > $this->maxReconnectAttempts) {
+            $this->logger->error(sprintf('Max reconnect attempts (%d) reached', $this->maxReconnectAttempts));
+            return false;
+        }
+
+        $this->logger->warning(sprintf('Attempting to reconnect (attempt %d/%d)...', $attempt, $this->maxReconnectAttempts));
+        
+        // Close existing socket if any
+        if (is_resource($this->socket)) {
+            @stream_socket_shutdown($this->socket, STREAM_SHUT_RDWR);
+        }
+
+        // Wait before reconnecting
+        if ($attempt > 1) {
+            sleep($this->reconnectDelay);
+        }
+
+        try {
+            $this->open();
+            $this->logger->info('Reconnected successfully');
+            return true;
+        } catch (ClientException $e) {
+            $this->logger->error(sprintf('Reconnect attempt %d failed: %s', $attempt, $e->getMessage()));
+            return $this->reconnect($attempt + 1);
+        }
+    }
+
+    /**
+     * Checks if socket is connected and attempts to reconnect if enabled.
+     *
+     * @throws \PAMI\Client\Exception\ClientException
+     * @return void
+     */
+    protected function ensureConnected()
+    {
+        if (!is_resource($this->socket)) {
+            if ($this->autoReconnect) {
+                if (!$this->reconnect()) {
+                    throw new ClientException('Socket is not connected and reconnection failed');
+                }
+            } else {
+                throw new ClientException('Socket is not connected');
+            }
+        }
+    }
+
+    /**
      * Registers the given listener so it can receive events. Returns the generated
      * id for this new listener. You can pass in a an IEventListener, a Closure,
      * and an array containing the object and name of the method to invoke. Can specify
@@ -284,6 +361,8 @@ class ClientImpl implements IClient
     protected function getMessages()
     {
         $msgs = array();
+        // Ensure socket is connected, auto-reconnect if needed
+        $this->ensureConnected();
         // Read something.
         //$read = @fread($this->socket, 65535);
         $read = @fread($this->socket, 8192);
@@ -502,13 +581,20 @@ class ClientImpl implements IClient
         );
         $this->lastActionId = $message->getActionId();
         $this->lastActionClass = $message;
+        // Ensure socket is connected, auto-reconnect if needed
+        $this->ensureConnected();
         if (@fwrite($this->socket, $messageToSend) < $length) {
             throw new ClientException('Could not send message');
         }
         $waituntil = time() + $this->rTimeout;
         while (time() <= $waituntil) {
-            stream_set_timeout($this->socket, $this->rTimeout);
+            if (is_resource($this->socket)) {
+                stream_set_timeout($this->socket, $this->rTimeout);
+            }
             $this->process();
+            if (!is_resource($this->socket)) {
+                throw new ClientException('Socket connection lost');
+            }
             $info = stream_get_meta_data($this->socket);
             if ($info['timed_out']) {
                 break;
@@ -587,5 +673,9 @@ class ClientImpl implements IClient
         $this->responseFactory = new ResponseFactoryImpl();
         $this->incomingQueue = array();
         $this->lastActionId = false;
+        // Auto-reconnect settings
+        $this->autoReconnect = isset($options['auto_reconnect']) ? (bool)$options['auto_reconnect'] : true;
+        $this->maxReconnectAttempts = isset($options['max_reconnect_attempts']) ? (int)$options['max_reconnect_attempts'] : 5;
+        $this->reconnectDelay = isset($options['reconnect_delay']) ? (int)$options['reconnect_delay'] : 2;
     }
 }
